@@ -61,16 +61,29 @@
             top: 20px;
             left: 20px;
             right: 20px;
-            z-index: 1000;
             background: rgba(0, 0, 0, 0.8);
+            color: white;
             padding: 15px;
-            border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
             font-size: 14px;
-            opacity: 1;
+            z-index: 1000;
             transition: opacity 0.3s ease;
+        }
+        
+        .upload-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 15px;
+        }
+        
+        .upload-btn:hover {
+            background: #45a049;
         }
         
         .controls.hidden {
@@ -159,10 +172,12 @@
     <div class="teleprompter-container">
         <div class="controls" id="controls">
             <div class="control-group">
-                <div class="control-item">
-                    <span>Status:</span>
-                    <span class="status" id="status">Paused</span>
-                </div>
+                <span>Font: <span id="fontSize">54px</span></span>
+                <span>Speed: <span id="speed">1.0x</span></span>
+                <span>Status: <span id="status">Stopped</span></span>
+                <button id="uploadScriptBtn" class="upload-btn">Upload Script (.md/.txt)</button>
+            </div>
+            <div class="control-group">
                 <div class="control-item">
                     <span>Speed:</span>
                     <span class="speed-display" id="speed-display">1.0x</span>
@@ -219,12 +234,20 @@
         const fontSizeDisplay = document.getElementById('font-size-display');
         const controlsElement = document.getElementById('controls');
         
-        // Load script from external file using FileReader API
+        // Load script from localStorage, external file, or show upload option
         function loadScript() {
+            // Check localStorage first
+            const savedScript = localStorage.getItem('teleprompterScript');
+            if (savedScript) {
+                const html = convertMarkdownToHTML(savedScript);
+                scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+                return;
+            }
+            
             // Create a file input element (hidden)
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
-            fileInput.accept = '.md';
+            fileInput.accept = '.md,.txt';
             fileInput.style.display = 'none';
             document.body.appendChild(fileInput);
             
@@ -236,11 +259,13 @@
             
             fileInput.onchange = function(event) {
                 const file = event.target.files[0];
-                if (file && file.name.endsWith('.md')) {
+                if (file && (file.name.endsWith('.md') || file.name.endsWith('.txt'))) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
-                        const markdown = e.target.result;
-                        const html = convertMarkdownToHTML(markdown);
+                        const content = e.target.result;
+                        // Save to localStorage
+                        localStorage.setItem('teleprompterScript', content);
+                        const html = convertMarkdownToHTML(content);
                         scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
                         loadButton.remove();
                     };
@@ -293,6 +318,38 @@
                 .filter(p => p.length > 0)
                 .join('\n');
         }
+
+        // Upload script function for button
+        function uploadScript() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.md,.txt';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            
+            fileInput.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file && (file.name.endsWith('.md') || file.name.endsWith('.txt'))) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        // Save to localStorage
+                        localStorage.setItem('teleprompterScript', content);
+                        const html = convertMarkdownToHTML(content);
+                        scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+                        resetScript();
+                        showControlsTemporarily();
+                    };
+                    reader.readAsText(file);
+                }
+                document.body.removeChild(fileInput);
+            };
+            
+            fileInput.click();
+        }
+        
+        // Add event listener for upload button
+        document.getElementById('uploadScriptBtn').addEventListener('click', uploadScript);
 
         // Initialize
         updateDisplays();
