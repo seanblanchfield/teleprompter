@@ -215,7 +215,7 @@
                 </div>
                 <div class="control-center">
                     <div class="instructions">
-                        ← → Speed | ↑ ↓ Font Size | Space Play/Pause | R Reset | H Hide
+                        ← → Speed | ↑ ↓ Font Size | Space Play/Pause | H Hide
                     </div>
                     <div class="instructions-sub">
                         Hold ← → for FF/RW
@@ -711,10 +711,6 @@ Press **F11** for full-screen mode.`;
                 case 'ArrowDown':
                     event.preventDefault();
                     adjustFontSize(-2);
-                    break;
-                case 'KeyR':
-                    event.preventDefault();
-                    resetScript();
                     break;
                 case 'KeyH':
                     event.preventDefault();
