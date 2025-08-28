@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teleprompter</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -32,7 +33,7 @@
             padding: 40px 60px;
             font-size: 16px;
             line-height: 1.6;
-            text-align: center;
+            text-align: left;
             max-width: 1000px;
             margin: 0 auto;
             font-weight: 400;
@@ -345,30 +346,9 @@ Press **F11** for full-screen mode.`;
             scriptContent.style.top = '180px';
         }
 
-        // Simple markdown to HTML converter
+        // Markdown to HTML converter using marked.js
         function convertMarkdownToHTML(markdown) {
-            return markdown
-                // Headers
-                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                // Bold text with **
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                // Italic text with *
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                // Line breaks and paragraphs
-                .split('\n\n')
-                .map(paragraph => {
-                    paragraph = paragraph.trim();
-                    if (paragraph.startsWith('<h')) {
-                        return paragraph;
-                    } else if (paragraph.length > 0) {
-                        return '<p>' + paragraph.replace(/\n/g, ' ') + '</p>';
-                    }
-                    return '';
-                })
-                .filter(p => p.length > 0)
-                .join('\n');
+            return marked.parse(markdown);
         }
 
         // Upload script function for button
@@ -411,6 +391,7 @@ Press **F11** for full-screen mode.`;
 
         // Initialize
         adjustSpeedForFontSize(); // Set speed based on initial font size
+        adjustMarginsForFontSize(); // Set initial margins
         updateDisplays();
         showControlsTemporarily();
         adjustReadingLineThickness(); // Set initial line thickness
@@ -507,27 +488,26 @@ Press **F11** for full-screen mode.`;
         }
         
         function adjustMarginsForFontSize() {
-            // At 72px and below: use current margins (60px)
-            // Above 72px: gradually reduce margins to 0 at 144px
-            if (fontSize <= 72) {
-                scriptContent.style.padding = '40px 60px';
+            // Scale margins inversely with font size
+            // 16px font = 200px margins, 144px font = 20px margins
+            const minFontSize = 16;
+            const maxFontSize = 144;
+            const maxMargin = 200;
+            const minMargin = 20;
+            
+            const clampedFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+            const margin = maxMargin - (clampedFontSize - minFontSize) * (maxMargin - minMargin) / (maxFontSize - minFontSize);
+            const roundedMargin = Math.round(margin);
+            
+            scriptContent.style.padding = `40px ${roundedMargin}px`;
+            
+            // Adjust max-width based on font size
+            if (fontSize <= 32) {
+                scriptContent.style.maxWidth = '800px';
+            } else if (fontSize <= 72) {
                 scriptContent.style.maxWidth = '1000px';
             } else {
-                // Linear interpolation from 60px at 72px to 0px at 144px
-                const maxMarginFontSize = 72;
-                const minMarginFontSize = 144;
-                const maxMargin = 60;
-                const minMargin = 0;
-                
-                const clampedFontSize = Math.max(maxMarginFontSize, Math.min(minMarginFontSize, fontSize));
-                const margin = maxMargin - (clampedFontSize - maxMarginFontSize) * (maxMargin - minMargin) / (minMarginFontSize - maxMarginFontSize);
-                const roundedMargin = Math.round(margin);
-                
-                scriptContent.style.padding = `40px ${roundedMargin}px`;
-                
-                // Also increase max-width for larger fonts
-                const maxWidth = fontSize > 100 ? 'none' : '1200px';
-                scriptContent.style.maxWidth = maxWidth;
+                scriptContent.style.maxWidth = 'none';
             }
         }
         
