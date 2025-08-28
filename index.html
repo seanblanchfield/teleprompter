@@ -736,6 +736,44 @@ Press **F11** for full-screen mode.`;
         // Mouse movement shows controls temporarily
         document.addEventListener('mousemove', showControlsTemporarily);
         
+        // Manual scrolling with trackpad/mouse wheel
+        let manualScrollTimeout = null;
+        let wasScrollingBeforeManual = false;
+        
+        document.addEventListener('wheel', function(event) {
+            event.preventDefault(); // Prevent page scrolling
+            
+            // Pause automatic scrolling during manual scrolling
+            if (isScrolling) {
+                wasScrollingBeforeManual = true;
+                isScrolling = false;
+            }
+            
+            // Get current position
+            const currentTop = parseFloat(scriptContent.style.top) || 180;
+            
+            // Calculate new position based on wheel delta
+            const scrollSensitivity = 2; // Adjust sensitivity as needed
+            const deltaY = event.deltaY * scrollSensitivity;
+            const newTop = currentTop - deltaY;
+            
+            // Apply the new position
+            scriptContent.style.top = newTop + 'px';
+            
+            // Clear existing timeout
+            if (manualScrollTimeout) {
+                clearTimeout(manualScrollTimeout);
+            }
+            
+            // Resume automatic scrolling after 2 seconds of no manual scrolling
+            manualScrollTimeout = setTimeout(() => {
+                if (wasScrollingBeforeManual) {
+                    isScrolling = true;
+                    wasScrollingBeforeManual = false;
+                }
+            }, 2000);
+        });
+        
         // Prevent context menu on right click
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
