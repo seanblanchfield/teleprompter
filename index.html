@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teleprompter - Survival in the Age of Agents</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .teleprompter-container {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .script-content {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            right: 0;
+            padding: 40px 60px;
+            font-size: 54px;
+            line-height: 1.6;
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+        
+        .script-content h1 {
+            font-size: 1.5em;
+            margin: 40px 0;
+            font-weight: bold;
+        }
+        
+        .script-content h2 {
+            font-size: 1.3em;
+            margin: 30px 0 20px 0;
+            font-weight: bold;
+        }
+        
+        .script-content p {
+            margin: 20px 0;
+        }
+        
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .controls.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .speed-display {
+            color: #2196F3;
+            font-weight: bold;
+            min-width: 60px;
+        }
+        
+        .font-size-display {
+            color: #FF9800;
+            font-weight: bold;
+            min-width: 60px;
+        }
+        
+        .instructions {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        button {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        button:hover {
+            background: #555;
+        }
+        
+        .reading-line {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(76, 175, 80, 0.5);
+            z-index: 500;
+            transform: translateY(-1px);
+        }
+        
+        @media (max-width: 768px) {
+            .script-content {
+                padding: 20px 30px;
+                font-size: 28px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="teleprompter-container">
+        <div class="controls" id="controls">
+            <div class="control-group">
+                <div class="control-item">
+                    <span>Status:</span>
+                    <span class="status" id="status">Paused</span>
+                </div>
+                <div class="control-item">
+                    <span>Speed:</span>
+                    <span class="speed-display" id="speed-display">1.0x</span>
+                </div>
+                <div class="control-item">
+                    <span>Font:</span>
+                    <span class="font-size-display" id="font-size-display">54px</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <button onclick="toggleScrolling()">Play/Pause (Space)</button>
+                <button onclick="resetScript()">Reset (R)</button>
+                <button onclick="toggleControls()">Hide Controls (H)</button>
+            </div>
+            <div class="instructions">
+                ← → Speed | ↑ ↓ Font Size | Space Play/Pause | R Reset | H Hide
+            </div>
+        </div>
+        
+        <div class="reading-line"></div>
+        
+        <div class="script-content" id="script-content">
+            <div id="loading-message">Loading script...</div>
+            <div style="height: 100vh;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Teleprompter State
+        let isScrolling = false;
+        let scrollSpeed = 1.0;
+        let fontSize = 54;
+        let animationId = null;
+        let controlsVisible = true;
+        let hideTimeout = null;
+        
+        // Predefined font sizes (32px to 144px)
+        const fontSizes = [32, 42, 52, 62, 72, 92, 112, 144];
+        let currentFontSizeIndex = fontSizes.indexOf(54) !== -1 ? fontSizes.indexOf(54) : 2; // Default to 52px if 54 not found
+        
+        // Fast forward / rewind state
+        let originalSpeed = 1.0;
+        let isLongPressing = false;
+        let longPressTimeout = null;
+        let lastAction = null; // Track whether last long press was 'ff' or 'rw'
+        const longPressDelay = 500; // 500ms to trigger long press
+        const ffSpeed = 3.0; // Fast forward speed
+        const rwSpeed = -2.0; // Rewind speed (negative for reverse)
+        
+        // DOM Elements
+        const scriptContent = document.getElementById('script-content');
+        const statusElement = document.getElementById('status');
+        const speedDisplay = document.getElementById('speed-display');
+        const fontSizeDisplay = document.getElementById('font-size-display');
+        const controlsElement = document.getElementById('controls');
+        
+        // Load script from external file using FileReader API
+        function loadScript() {
+            // Create a file input element (hidden)
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.md';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            
+            // Add manual file selection button
+            const loadButton = document.createElement('button');
+            loadButton.textContent = 'Load Script File';
+            loadButton.style.cssText = 'position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 1001; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;';
+            loadButton.onclick = () => fileInput.click();
+            
+            fileInput.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file && file.name.endsWith('.md')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const markdown = e.target.result;
+                        const html = convertMarkdownToHTML(markdown);
+                        scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+                        loadButton.remove();
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            
+            // Try to load script.md automatically first
+            loadScriptFromURL(loadButton);
+        }
+        
+        // Try to load script.md via URL (works with local server)
+        async function loadScriptFromURL(loadButton) {
+            try {
+                const response = await fetch('script.md');
+                const markdown = await response.text();
+                const html = convertMarkdownToHTML(markdown);
+                scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+                // Auto-load succeeded, don't show the button
+            } catch (error) {
+                console.log('Auto-load failed (expected with file:// protocol):', error.message);
+                scriptContent.innerHTML = '<div style="color: #ff9800; text-align: center; padding: 40px;">Click "Load Script File" to select script.md<br><br>Or serve this directory with a local web server to auto-load the script.</div><div style="height: 100vh;"></div>';
+                // Auto-load failed, show the button
+                document.body.appendChild(loadButton);
+            }
+        }
+
+        // Simple markdown to HTML converter
+        function convertMarkdownToHTML(markdown) {
+            return markdown
+                // Headers
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                // Bold text with **
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Italic text with *
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Line breaks and paragraphs
+                .split('\n\n')
+                .map(paragraph => {
+                    paragraph = paragraph.trim();
+                    if (paragraph.startsWith('<h')) {
+                        return paragraph;
+                    } else if (paragraph.length > 0) {
+                        return '<p>' + paragraph.replace(/\n/g, ' ') + '</p>';
+                    }
+                    return '';
+                })
+                .filter(p => p.length > 0)
+                .join('\n');
+        }
+
+        // Initialize
+        updateDisplays();
+        showControlsTemporarily();
+        adjustReadingLineThickness(); // Set initial line thickness
+        loadScript();
+        
+        // Animation function
+        function scroll() {
+            if (isScrolling) {
+                const currentTop = parseFloat(scriptContent.style.top) || 50;
+                const newTop = currentTop - (scrollSpeed * 0.5);
+                scriptContent.style.top = newTop + 'px';
+                
+                // Check if we've scrolled past the end
+                if (newTop < -scriptContent.offsetHeight) {
+                    resetScript();
+                    return;
+                }
+                
+                animationId = requestAnimationFrame(scroll);
+            }
+        }
+        
+        // Control functions
+        function toggleScrolling() {
+            isScrolling = !isScrolling;
+            if (isScrolling) {
+                scroll();
+            } else if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            updateDisplays();
+            showControlsTemporarily();
+        }
+        
+        function resetScript() {
+            isScrolling = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            scriptContent.style.top = '50px';
+            updateDisplays();
+            showControlsTemporarily();
+        }
+        
+        function adjustSpeed(delta) {
+            scrollSpeed = Math.max(0.1, Math.min(5.0, scrollSpeed + delta));
+            // Update originalSpeed to track user-set speed changes
+            if (!isLongPressing) {
+                originalSpeed = scrollSpeed;
+            }
+            updateDisplays();
+            showControlsTemporarily();
+        }
+        
+        function adjustFontSize(delta) {
+            fontSize = Math.max(16, Math.min(144, fontSize + delta));
+            scriptContent.style.fontSize = fontSize + 'px';
+            adjustMarginsForFontSize();
+            adjustReadingLineThickness();
+            adjustSpeedForFontSize();
+            updateDisplays();
+            showControlsTemporarily();
+        }
+        
+        function cycleFontSize() {
+            currentFontSizeIndex = (currentFontSizeIndex + 1) % fontSizes.length;
+            fontSize = fontSizes[currentFontSizeIndex];
+            scriptContent.style.fontSize = fontSize + 'px';
+            adjustMarginsForFontSize();
+            adjustReadingLineThickness();
+            adjustSpeedForFontSize();
+            updateDisplays();
+            showControlsTemporarily();
+        }
+        
+        function adjustMarginsForFontSize() {
+            // At 72px and below: use current margins (60px)
+            // Above 72px: gradually reduce margins to 0 at 144px
+            if (fontSize <= 72) {
+                scriptContent.style.padding = '40px 60px';
+                scriptContent.style.maxWidth = '1000px';
+            } else {
+                // Linear interpolation from 60px at 72px to 0px at 144px
+                const maxMarginFontSize = 72;
+                const minMarginFontSize = 144;
+                const maxMargin = 60;
+                const minMargin = 0;
+                
+                const clampedFontSize = Math.max(maxMarginFontSize, Math.min(minMarginFontSize, fontSize));
+                const margin = maxMargin - (clampedFontSize - maxMarginFontSize) * (maxMargin - minMargin) / (minMarginFontSize - maxMarginFontSize);
+                const roundedMargin = Math.round(margin);
+                
+                scriptContent.style.padding = `40px ${roundedMargin}px`;
+                
+                // Also increase max-width for larger fonts
+                const maxWidth = fontSize > 100 ? 'none' : '1200px';
+                scriptContent.style.maxWidth = maxWidth;
+            }
+        }
+        
+        function adjustReadingLineThickness() {
+            // Scale line thickness with font size
+            // 32px font = 2px line, 144px font = 8px line
+            const minFontSize = 32;
+            const maxFontSize = 144;
+            const minThickness = 2;
+            const maxThickness = 8;
+            
+            const clampedFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+            const thickness = minThickness + (clampedFontSize - minFontSize) * (maxThickness - minThickness) / (maxFontSize - minFontSize);
+            const roundedThickness = Math.round(thickness);
+            
+            const readingLine = document.querySelector('.reading-line');
+            if (readingLine) {
+                readingLine.style.height = roundedThickness + 'px';
+                readingLine.style.transform = `translateY(-${Math.floor(roundedThickness / 2)}px)`;
+            }
+        }
+        
+        function adjustSpeedForFontSize() {
+            // Extended speed scaling: 32px = 0.3, 72px = 0.9, 144px = 1.5
+            let speed;
+            if (fontSize <= 72) {
+                // Original range: 32px = 0.3 speed, 72px = 0.9 speed
+                const minFontSize = 32;
+                const maxFontSize = 72;
+                const minSpeed = 0.3;
+                const maxSpeed = 0.9;
+                
+                const clampedFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+                speed = minSpeed + (clampedFontSize - minFontSize) * (maxSpeed - minSpeed) / (maxFontSize - minFontSize);
+            } else {
+                // Extended range: 72px = 0.9 speed, 144px = 1.5 speed
+                const minFontSize = 72;
+                const maxFontSize = 144;
+                const minSpeed = 0.9;
+                const maxSpeed = 1.5;
+                
+                const clampedFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+                speed = minSpeed + (clampedFontSize - minFontSize) * (maxSpeed - minSpeed) / (maxFontSize - minFontSize);
+            }
+            
+            scrollSpeed = Math.round(speed * 100) / 100; // Round to 2 decimal places
+            
+            // Update originalSpeed to track the new font-size-based speed
+            if (!isLongPressing) {
+                originalSpeed = scrollSpeed;
+            }
+        }
+        
+        function startLongPress(action) {
+            if (isLongPressing || longPressTimeout) return;
+            
+            longPressTimeout = setTimeout(() => {
+                isLongPressing = true;
+                lastAction = action;
+                originalSpeed = scrollSpeed;
+                
+                if (action === 'ff') {
+                    scrollSpeed = ffSpeed;
+                    if (!isScrolling) {
+                        toggleScrolling(); // Start playing if not already
+                    }
+                } else if (action === 'rw') {
+                    scrollSpeed = rwSpeed;
+                    if (!isScrolling) {
+                        toggleScrolling(); // Start playing if not already
+                    }
+                }
+                updateDisplays();
+            }, longPressDelay);
+        }
+        
+        function endLongPress() {
+            if (longPressTimeout) {
+                clearTimeout(longPressTimeout);
+                longPressTimeout = null;
+            }
+            
+            if (isLongPressing) {
+                // Restore the actual speed that was set before FF/RW
+                scrollSpeed = originalSpeed;
+                
+                // Compensate for the speed adjustment that happened before long press triggered
+                if (lastAction === 'rw') {
+                    scrollSpeed += 0.2; // Add back the 0.2 that was subtracted
+                } else if (lastAction === 'ff') {
+                    scrollSpeed -= 0.2; // Subtract the 0.2 that was added
+                }
+                
+                isLongPressing = false;
+                lastAction = null;
+                updateDisplays();
+            }
+        }
+        
+        function toggleControls() {
+            controlsVisible = !controlsVisible;
+            controlsElement.classList.toggle('hidden', !controlsVisible);
+            if (controlsVisible) {
+                showControlsTemporarily();
+            }
+        }
+        
+        function showControlsTemporarily() {
+            if (!controlsVisible) return;
+            
+            controlsElement.classList.remove('hidden');
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                if (controlsVisible && !isScrolling) {
+                    controlsElement.classList.add('hidden');
+                }
+            }, 3000);
+        }
+        
+        function updateDisplays() {
+            statusElement.textContent = isScrolling ? 'Playing' : 'Paused';
+            statusElement.style.color = isScrolling ? '#4CAF50' : '#f44336';
+            speedDisplay.textContent = scrollSpeed.toFixed(1) + 'x';
+            fontSizeDisplay.textContent = fontSize + 'px';
+        }
+        
+        // Keyboard event handler
+        document.addEventListener('keydown', function(event) {
+            switch(event.code) {
+                case 'Space':
+                    event.preventDefault();
+                    toggleScrolling();
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    if (!longPressTimeout && !isLongPressing) {
+                        adjustSpeed(0.2);
+                    }
+                    startLongPress('ff');
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    if (!longPressTimeout && !isLongPressing) {
+                        adjustSpeed(-0.2);
+                    }
+                    startLongPress('rw');
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    adjustFontSize(2);
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    adjustFontSize(-2);
+                    break;
+                case 'KeyR':
+                    event.preventDefault();
+                    resetScript();
+                    break;
+                case 'KeyH':
+                    event.preventDefault();
+                    toggleControls();
+                    break;
+                case 'F5':
+                    event.preventDefault();
+                    if (!isScrolling) {
+                        toggleScrolling();
+                    }
+                    break;
+                case 'Escape':
+                    event.preventDefault();
+                    if (isScrolling) {
+                        toggleScrolling();
+                    }
+                    break;
+                case 'PageUp':
+                    event.preventDefault();
+                    if (!longPressTimeout && !isLongPressing) {
+                        adjustSpeed(-0.2);
+                    }
+                    startLongPress('rw');
+                    break;
+                case 'PageDown':
+                    event.preventDefault();
+                    if (!longPressTimeout && !isLongPressing) {
+                        adjustSpeed(0.2);
+                    }
+                    startLongPress('ff');
+                    break;
+                case 'Period':
+                    event.preventDefault();
+                    cycleFontSize();
+                    break;
+            }
+        });
+        
+        // Handle key release for long press functionality
+        document.addEventListener('keyup', function(event) {
+            // Always end long press on any key release to be more reliable
+            endLongPress();
+        });
+        
+        // Mouse movement shows controls temporarily
+        document.addEventListener('mousemove', showControlsTemporarily);
+        
+        // Prevent context menu on right click
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+        
+        // Initialize app
+        console.log('Teleprompter loaded successfully! Use Space to play/pause, ← → for speed, ↑ ↓ for font size.');
+    </script>
+</body>
+</html>
