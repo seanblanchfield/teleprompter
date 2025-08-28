@@ -1,6 +1,16 @@
 # Teleprompter App
 
-A professional teleprompter application built with HTML, CSS, and JavaScript. Perfect for presentations, speeches, and video recording.
+A professional teleprompter application designed for full-screen presentation delivery. Built with HTML, CSS, and JavaScript, this app is optimized for use on a large screen or monitor while being controlled discretely from presentation remotes like the Logitech R400.
+
+## Presentation Setup
+
+This teleprompter is designed to be used:
+- **Full-screen mode** in your browser (press F11)
+- **From a distance** - reading text displayed on a large screen or monitor
+- **With presentation remotes** - control speed, font size, and playback without touching the computer
+- **Hands-free operation** - deliver your speech naturally while making discrete adjustments from your pocket
+
+The keybindings are specifically mapped to common presentation remote controls, allowing seamless operation during live presentations, video recording, or public speaking.
 
 ## Features
 
@@ -13,29 +23,37 @@ A professional teleprompter application built with HTML, CSS, and JavaScript. Pe
 
 ## Keyboard Controls
 
-### Playback
-- **Space** - Toggle play/pause
-- **F5** - Start playing
-- **ESC** - Stop/pause
-- **R** - Reset to beginning
+### Presentation Remote Compatible
+These controls work with popular presentation remotes like the Logitech R400:
 
-### Speed Control
-- **← →** - Adjust speed (tap) / Rewind/Fast Forward (hold)
+- **F5** - Start playing (standard presentation start key)
+- **ESC** - Stop/pause (standard presentation exit key)
 - **Page Up/Down** - Adjust speed (tap) / Rewind/Fast Forward (hold)
+- **Period (.)** - Cycle through font sizes (32px → 144px for distance viewing)
 
-### Font Control
+### Additional Keyboard Controls
+- **Space** - Toggle play/pause
+- **R** - Reset to beginning
+- **← →** - Adjust speed (tap) / Rewind/Fast Forward (hold)
 - **↑ ↓** - Fine adjust font size (+/- 2px)
-- **Period (.)** - Cycle through preset sizes (32, 42, 52, 62, 72, 92, 112, 144px)
-
-### Interface
 - **H** - Hide/show controls
+
+### Remote Control Usage
+With a Logitech R400 or similar presentation remote:
+1. **Black screen button** → ESC (pause/stop)
+2. **Start presentation** → F5 (play)
+3. **Next slide** → Page Down (increase speed or fast forward)
+4. **Previous slide** → Page Up (decrease speed or rewind)
+5. **Laser pointer** → Period (cycle font sizes for optimal distance viewing)
 
 ## Usage
 
-1. Open `index.html` in your web browser
+1. Open `index.html` in your web browser and press **F11** for full-screen mode
 2. The app will automatically load `script.md` or prompt you to select a file
-3. Use keyboard controls to operate the teleprompter
-4. Adjust font size and speed as needed for your setup
+3. Position yourself at your desired distance from the screen
+4. Use your presentation remote or keyboard controls to operate the teleprompter
+5. Adjust font size with the period key for optimal readability at your distance
+6. Control playback speed discretely during your presentation
 
 ## Customization
 
