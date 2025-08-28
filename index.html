@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teleprompter - Survival in the Age of Agents</title>
+    <title>Teleprompter</title>
     <style>
         * {
             margin: 0;
@@ -27,11 +27,11 @@
         
         .script-content {
             position: absolute;
-            top: 50px;
+            top: 180px;
             left: 0;
             right: 0;
             padding: 40px 60px;
-            font-size: 54px;
+            font-size: 16px;
             line-height: 1.6;
             text-align: center;
             max-width: 1000px;
@@ -58,12 +58,12 @@
         
         .controls {
             position: fixed;
-            top: 20px;
+            top: 5px;
             left: 20px;
             right: 20px;
             background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 15px;
+            padding: 8px 15px;
             border-radius: 8px;
             font-family: Arial, sans-serif;
             font-size: 14px;
@@ -79,11 +79,22 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
-            margin-left: 15px;
         }
         
         .upload-btn:hover {
             background: #45a049;
+        }
+        
+        .github-link {
+            color: #ccc;
+            text-decoration: none;
+            font-size: 11px;
+            transition: color 0.3s ease;
+        }
+        
+        .github-link:hover {
+            color: #fff;
+            text-decoration: underline;
         }
         
         .controls.hidden {
@@ -91,10 +102,29 @@
             pointer-events: none;
         }
         
-        .control-group {
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .control-left {
             display: flex;
             align-items: center;
             gap: 15px;
+        }
+        
+        .control-center {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .control-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
         }
         
         .control-item {
@@ -171,29 +201,21 @@
 <body>
     <div class="teleprompter-container">
         <div class="controls" id="controls">
-            <div class="control-group">
-                <span>Font: <span id="fontSize">54px</span></span>
-                <span>Speed: <span id="speed">1.0x</span></span>
-                <span>Status: <span id="status">Stopped</span></span>
-                <button id="uploadScriptBtn" class="upload-btn">Upload Script (.md/.txt)</button>
-            </div>
-            <div class="control-group">
-                <div class="control-item">
-                    <span>Speed:</span>
-                    <span class="speed-display" id="speed-display">1.0x</span>
+            <div class="control-row">
+                <div class="control-left">
+                    <span>Font: <span id="font-size-display">16px</span></span>
+                    <span>Speed: <span id="speed-display">1.0x</span></span>
+                    <span>Status: <span id="status">Stopped</span></span>
                 </div>
-                <div class="control-item">
-                    <span>Font:</span>
-                    <span class="font-size-display" id="font-size-display">54px</span>
+                <div class="control-center">
+                    <div class="instructions">
+                        ← → Speed | ↑ ↓ Font Size | Space Play/Pause | R Reset | H Hide
+                    </div>
                 </div>
-            </div>
-            <div class="control-group">
-                <button onclick="toggleScrolling()">Play/Pause (Space)</button>
-                <button onclick="resetScript()">Reset (R)</button>
-                <button onclick="toggleControls()">Hide Controls (H)</button>
-            </div>
-            <div class="instructions">
-                ← → Speed | ↑ ↓ Font Size | Space Play/Pause | R Reset | H Hide
+                <div class="control-right">
+                    <button id="uploadScriptBtn" class="upload-btn">Upload Script</button>
+                    <a href="https://github.com/seanblanchfield/teleprompter" target="_blank" class="github-link">GitHub</a>
+                </div>
             </div>
         </div>
         
@@ -209,14 +231,14 @@
         // Teleprompter State
         let isScrolling = false;
         let scrollSpeed = 1.0;
-        let fontSize = 54;
+        let fontSize = 16;
         let animationId = null;
         let controlsVisible = true;
         let hideTimeout = null;
         
         // Predefined font sizes (32px to 144px)
         const fontSizes = [32, 42, 52, 62, 72, 92, 112, 144];
-        let currentFontSizeIndex = fontSizes.indexOf(54) !== -1 ? fontSizes.indexOf(54) : 2; // Default to 52px if 54 not found
+        let currentFontSizeIndex = fontSizes.indexOf(32) !== -1 ? fontSizes.indexOf(32) : 0; // Default to 32px
         
         // Fast forward / rewind state
         let originalSpeed = 1.0;
@@ -273,24 +295,43 @@
                 }
             };
             
-            // Try to load script.md automatically first
+            // Try to load README.md automatically first
             loadScriptFromURL(loadButton);
         }
         
-        // Try to load script.md via URL (works with local server)
+        // Try to load README.md via URL (works with web server)
         async function loadScriptFromURL(loadButton) {
             try {
-                const response = await fetch('script.md');
+                // Try README.md (for GitHub Pages and web servers)
+                const response = await fetch('README.md');
                 const markdown = await response.text();
                 const html = convertMarkdownToHTML(markdown);
                 scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
-                // Auto-load succeeded, don't show the button
+                // Auto-load succeeded
             } catch (error) {
-                console.log('Auto-load failed (expected with file:// protocol):', error.message);
-                scriptContent.innerHTML = '<div style="color: #ff9800; text-align: center; padding: 40px;">Click "Load Script File" to select script.md<br><br>Or serve this directory with a local web server to auto-load the script.</div><div style="height: 100vh;"></div>';
-                // Auto-load failed, show the button
-                document.body.appendChild(loadButton);
+                console.log('README.md load failed (expected with file:// protocol):', error.message);
+                // Show built-in default content for local file access
+                showDefaultContent();
             }
+        }
+        
+        // Show built-in default content
+        function showDefaultContent() {
+            const defaultContent = `# Teleprompter
+
+Click **"Upload Script"** above to load your own script (.md or .txt files).
+
+## Controls
+
+- **F5** - Play
+- **ESC** - Stop
+- **Period (.)** - Change font size
+- **Page Up/Down** - Speed control
+
+Press **F11** for full-screen mode.`;
+            
+            const html = convertMarkdownToHTML(defaultContent);
+            scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
         }
 
         // Simple markdown to HTML converter
@@ -360,7 +401,7 @@
         // Animation function
         function scroll() {
             if (isScrolling) {
-                const currentTop = parseFloat(scriptContent.style.top) || 50;
+                const currentTop = parseFloat(scriptContent.style.top) || 180;
                 const newTop = currentTop - (scrollSpeed * 0.5);
                 scriptContent.style.top = newTop + 'px';
                 
@@ -391,7 +432,12 @@
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
-            scriptContent.style.top = '50px';
+            scriptContent.style.top = '180px';
+            
+            // Clear saved script from localStorage and reload default
+            localStorage.removeItem('teleprompterScript');
+            loadScript();
+            
             updateDisplays();
             showControlsTemporarily();
         }
