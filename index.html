@@ -27,7 +27,6 @@
         
         .script-content {
             position: absolute;
-            top: 180px;
             left: 0;
             right: 0;
             padding: 40px 60px;
@@ -151,8 +150,14 @@
         }
         
         .instructions {
-            color: #888;
             font-size: 12px;
+            color: #ccc;
+        }
+        
+        .instructions-sub {
+            font-size: 10px;
+            color: #999;
+            margin-top: 4px;
         }
         
         button {
@@ -211,6 +216,9 @@
                     <div class="instructions">
                         ← → Speed | ↑ ↓ Font Size | Space Play/Pause | R Reset | H Hide
                     </div>
+                    <div class="instructions-sub">
+                        Hold ← → for FF/RW
+                    </div>
                 </div>
                 <div class="control-right">
                     <button id="uploadScriptBtn" class="upload-btn">Upload Script</button>
@@ -263,6 +271,7 @@
             if (savedScript) {
                 const html = convertMarkdownToHTML(savedScript);
                 scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+                scriptContent.style.top = '180px';
                 return;
             }
             
@@ -307,9 +316,10 @@
                 const markdown = await response.text();
                 const html = convertMarkdownToHTML(markdown);
                 scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+                scriptContent.style.top = '180px';
+                loadButton.remove();
                 // Auto-load succeeded
             } catch (error) {
-                console.log('README.md load failed (expected with file:// protocol):', error.message);
                 // Show built-in default content for local file access
                 showDefaultContent();
             }
@@ -332,6 +342,7 @@ Press **F11** for full-screen mode.`;
             
             const html = convertMarkdownToHTML(defaultContent);
             scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+            scriptContent.style.top = '180px';
         }
 
         // Simple markdown to HTML converter
@@ -378,7 +389,13 @@ Press **F11** for full-screen mode.`;
                         localStorage.setItem('teleprompterScript', content);
                         const html = convertMarkdownToHTML(content);
                         scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
-                        resetScript();
+                        // Reset position without clearing localStorage or reloading
+                        isScrolling = false;
+                        if (animationId) {
+                            cancelAnimationFrame(animationId);
+                        }
+                        scriptContent.style.top = '180px';
+                        updateDisplays();
                         showControlsTemporarily();
                     };
                     reader.readAsText(file);
@@ -393,6 +410,7 @@ Press **F11** for full-screen mode.`;
         document.getElementById('uploadScriptBtn').addEventListener('click', uploadScript);
 
         // Initialize
+        adjustSpeedForFontSize(); // Set speed based on initial font size
         updateDisplays();
         showControlsTemporarily();
         adjustReadingLineThickness(); // Set initial line thickness
@@ -401,13 +419,28 @@ Press **F11** for full-screen mode.`;
         // Animation function
         function scroll() {
             if (isScrolling) {
-                const currentTop = parseFloat(scriptContent.style.top) || 180;
-                const newTop = currentTop - (scrollSpeed * 0.5);
+                const currentTop = parseFloat(scriptContent.style.top);
+                const safeCurrentTop = isNaN(currentTop) ? 180 : currentTop;
+                
+                // Set initial position if not set
+                if (!scriptContent.style.top) {
+                    scriptContent.style.top = '180px';
+                    return;
+                }
+                
+                const newTop = safeCurrentTop - (scrollSpeed * 0.5);
+                
+                
                 scriptContent.style.top = newTop + 'px';
                 
-                // Check if we've scrolled past the end
-                if (newTop < -scriptContent.offsetHeight) {
-                    resetScript();
+                // Check if we've scrolled past the end (add buffer to ensure full scroll)
+                const scrollBuffer = window.innerHeight;
+                if (newTop < -(scriptContent.offsetHeight + scrollBuffer)) {
+                    isScrolling = false;
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                    }
+                    updateDisplays();
                     return;
                 }
                 
@@ -518,9 +551,18 @@ Press **F11** for full-screen mode.`;
         }
         
         function adjustSpeedForFontSize() {
-            // Extended speed scaling: 32px = 0.3, 72px = 0.9, 144px = 1.5
+            // Extended speed scaling: 16px = 0.5, 32px = 0.3, 72px = 0.9, 144px = 1.5
             let speed;
-            if (fontSize <= 72) {
+            if (fontSize <= 32) {
+                // Handle small fonts: 16px = 0.5 speed, 32px = 0.3 speed
+                const minFontSize = 16;
+                const maxFontSize = 32;
+                const minSpeed = 0.5;
+                const maxSpeed = 0.3;
+                
+                const clampedFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+                speed = minSpeed + (clampedFontSize - minFontSize) * (maxSpeed - minSpeed) / (maxFontSize - minFontSize);
+            } else if (fontSize <= 72) {
                 // Original range: 32px = 0.3 speed, 72px = 0.9 speed
                 const minFontSize = 32;
                 const maxFontSize = 72;
@@ -705,8 +747,6 @@ Press **F11** for full-screen mode.`;
             e.preventDefault();
         });
         
-        // Initialize app
-        console.log('Teleprompter loaded successfully! Use Space to play/pause, ← → for speed, ↑ ↓ for font size.');
     </script>
 </body>
 </html>

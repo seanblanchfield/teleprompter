@@ -14,8 +14,8 @@ The keybindings are specifically mapped to common presentation remote controls, 
 
 ## Features
 
-- **External Script Loading**: Load scripts from `script.md` files
-- **Dynamic Font Sizing**: 32px to 144px with automatic margin adjustment
+- **Script Upload**: Upload your own `.md` or `.txt` files with localStorage caching
+- **Dynamic Font Sizing**: 16px to 144px with automatic margin adjustment
 - **Speed Control**: Font-size adaptive speed scaling
 - **Fast Forward/Rewind**: Long-press controls for quick navigation
 - **Reading Line**: Visual guide that scales with font size
@@ -29,11 +29,11 @@ These controls work with popular presentation remotes like the Logitech R400:
 - **F5** - Start playing (standard presentation start key)
 - **ESC** - Stop/pause (standard presentation exit key)
 - **Page Up/Down** - Adjust speed (tap) / Rewind/Fast Forward (hold)
-- **Period (.)** - Cycle through font sizes (32px → 144px for distance viewing)
+- **Period (.)** - Cycle through font sizes (16px → 144px for distance viewing)
 
 ### Additional Keyboard Controls
 - **Space** - Toggle play/pause
-- **R** - Reset to beginning
+- **R** - Reset to beginning and clear uploaded script from cache
 - **← →** - Adjust speed (tap) / Rewind/Fast Forward (hold)
 - **↑ ↓** - Fine adjust font size (+/- 2px)
 - **H** - Hide/show controls
@@ -49,18 +49,21 @@ With a Logitech R400 or similar presentation remote:
 ## Usage
 
 1. Open `index.html` in your web browser and press **F11** for full-screen mode
-2. The app will automatically load `script.md` or prompt you to select a file
+2. Click **"Upload Script"** to select your own `.md` or `.txt` file (cached in localStorage)
 3. Position yourself at your desired distance from the screen
 4. Use your presentation remote or keyboard controls to operate the teleprompter
 5. Adjust font size with the period key for optimal readability at your distance
 6. Control playback speed discretely during your presentation
+7. Press **R** to reset and clear your uploaded script from cache
 
-## Customization
+## Script Management
 
-- Edit `script.md` to change the script content
-- Supports Markdown formatting (headers, bold, italic)
-- Font sizes automatically adjust margins for optimal viewing
-- Speed scales with font size for natural reading flow
+- **Upload your own scripts**: Use the "Upload Script" button to load `.md` or `.txt` files
+- **localStorage caching**: Your uploaded script is automatically saved and persists across sessions
+- **Markdown support**: Full formatting including headers, bold, italic text
+- **Reset functionality**: Press **R** to clear cached script and return to default content
+- **Font optimization**: Font sizes automatically adjust margins for optimal viewing
+- **Speed scaling**: Reading speed scales with font size for natural flow
 
 ## Deployment
 
