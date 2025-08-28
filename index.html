@@ -487,6 +487,32 @@ Press **F11** for full-screen mode.`;
             showControlsTemporarily();
         }
         
+        function increaseFontSize() {
+            // Calculate relative position before changing font size
+            const currentTop = parseFloat(scriptContent.style.top) || 180;
+            const viewportCenter = window.innerHeight / 2;
+            const relativePosition = (viewportCenter - currentTop) / scriptContent.offsetHeight;
+            
+            fontSize += 10;
+            if (fontSize > 146) {
+                fontSize = 16; // Wrap back to 16px after 146px
+            }
+            scriptContent.style.fontSize = fontSize + 'px';
+            adjustMarginsForFontSize();
+            adjustReadingLineThickness();
+            adjustSpeedForFontSize();
+            
+            // Wait for layout to update, then restore relative position
+            requestAnimationFrame(() => {
+                const newHeight = scriptContent.offsetHeight;
+                const newTop = viewportCenter - (relativePosition * newHeight);
+                scriptContent.style.top = newTop + 'px';
+            });
+            
+            updateDisplays();
+            showControlsTemporarily();
+        }
+        
         function adjustMarginsForFontSize() {
             // Progressive margin scaling from 16px to 144px
             // 16px font = 200px margins, 144px font = 10px margins
@@ -722,7 +748,7 @@ Press **F11** for full-screen mode.`;
                     break;
                 case 'Period':
                     event.preventDefault();
-                    cycleFontSize();
+                    increaseFontSize();
                     break;
             }
         });
