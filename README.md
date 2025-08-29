@@ -2,6 +2,8 @@
 
 A professional teleprompter application designed for full-screen presentation delivery. Built with HTML, CSS, and JavaScript, this app is optimized for use on a large screen or monitor while being controlled discretely from presentation remotes like the Logitech R400.
 
+## 🚀 [Try the Live Demo](https://seanblanchfield.github.io/teleprompter)
+
 ## Presentation Setup
 
 This teleprompter is designed to be used:
