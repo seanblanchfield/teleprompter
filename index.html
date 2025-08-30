@@ -38,6 +38,32 @@
             margin: 0 auto;
             font-weight: 400;
             letter-spacing: 0.5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* Override max-width on mobile devices */
+        @media (max-width: 768px) {
+            .script-content {
+                max-width: 100vw !important;
+                margin: 0 !important;
+                padding: 20px 15px !important;
+                width: 100vw !important;
+                left: 0 !important;
+                right: 0 !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .script-content {
+                max-width: 100vw !important;
+                margin: 0 !important;
+                padding: 15px 10px !important;
+                width: 100vw !important;
+                left: 0 !important;
+                right: 0 !important;
+                line-height: 1.4;
+            }
         }
         
         .script-content h1 {
@@ -294,11 +320,6 @@
         }
         
         @media (max-width: 768px) {
-            .script-content {
-                padding: 20px 30px;
-                font-size: 28px;
-            }
-            
             .controls {
                 flex-direction: column;
                 gap: 10px;
@@ -311,6 +332,54 @@
             
             .touch-dpad {
                 display: block;
+            }
+        }
+        
+        /* Additional breakpoint for very narrow screens */
+        @media (max-width: 480px) {
+            
+            .controls {
+                left: 10px;
+                right: 10px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .touch-dpad {
+                width: 120px;
+                height: 120px;
+                bottom: 15px;
+                right: 15px;
+            }
+            
+            .dpad-button {
+                font-size: 16px;
+            }
+            
+            .dpad-up, .dpad-down, .dpad-left, .dpad-right, .dpad-center {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .dpad-up {
+                left: 40px;
+            }
+            
+            .dpad-down {
+                left: 40px;
+            }
+            
+            .dpad-left {
+                top: 40px;
+            }
+            
+            .dpad-right {
+                top: 40px;
+            }
+            
+            .dpad-center {
+                top: 40px;
+                left: 40px;
             }
         }
         
@@ -413,6 +482,18 @@
             }
         }
         
+        // Set proper initial position for mobile devices
+        function setInitialPosition() {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                // On mobile, start with text at the top of the viewport
+                scriptContent.style.top = '80px';
+            } else {
+                // On desktop, use the original position
+                scriptContent.style.top = '180px';
+            }
+        }
+        
         // Force show D-pad for testing (remove this in production)
         function forceShowDpad() {
             touchDpad.classList.add('visible');
@@ -425,7 +506,7 @@
             if (savedScript) {
                 const html = convertMarkdownToHTML(savedScript);
                 scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
-                scriptContent.style.top = '180px';
+                setInitialPosition();
                 return;
             }
             
@@ -452,6 +533,7 @@
                         localStorage.setItem('teleprompterScript', content);
                         const html = convertMarkdownToHTML(content);
                         scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
+                        setInitialPosition();
                         loadButton.remove();
                     };
                     reader.readAsText(file);
@@ -470,7 +552,7 @@
                 const markdown = await response.text();
                 const html = convertMarkdownToHTML(markdown);
                 scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
-                scriptContent.style.top = '180px';
+                setInitialPosition();
                 loadButton.remove();
                 // Auto-load succeeded
             } catch (error) {
@@ -496,7 +578,7 @@ Press **F11** for full-screen mode.`;
             
             const html = convertMarkdownToHTML(defaultContent);
             scriptContent.innerHTML = html + '<div style="height: 100vh;"></div>';
-            scriptContent.style.top = '180px';
+            setInitialPosition();
         }
 
         // Markdown to HTML converter using marked.js
@@ -527,7 +609,7 @@ Press **F11** for full-screen mode.`;
                         if (animationId) {
                             cancelAnimationFrame(animationId);
                         }
-                        scriptContent.style.top = '180px';
+                        setInitialPosition();
                         updateDisplays();
                         showControlsTemporarily();
                     };
@@ -780,7 +862,7 @@ Press **F11** for full-screen mode.`;
                 
                 // Set initial position if not set
                 if (!scriptContent.style.top) {
-                    scriptContent.style.top = '180px';
+                    setInitialPosition();
                     return;
                 }
                 
@@ -821,7 +903,7 @@ Press **F11** for full-screen mode.`;
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
-            scriptContent.style.top = '180px';
+            setInitialPosition();
             
             // Clear saved script from localStorage and reload default
             localStorage.removeItem('teleprompterScript');
