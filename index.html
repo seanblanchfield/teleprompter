@@ -611,7 +611,7 @@ Press **F11** for full-screen mode.`;
                         }
                         setInitialPosition();
                         updateDisplays();
-                        showControlsTemporarily();
+                        updateControlsVisibility();
                     };
                     reader.readAsText(file);
                 }
@@ -695,7 +695,6 @@ Press **F11** for full-screen mode.`;
                         break;
                 }
                 showTouchFeedback(feedbackMessage);
-                showControlsTemporarily();
             }
             
             
@@ -753,6 +752,10 @@ Press **F11** for full-screen mode.`;
                 handleButtonAction('font-smaller', `Font: ${Math.max(16, fontSize - 2)}px`);
             });
             
+            dpadLeft.addEventListener('touchend', (e) => {
+                e.preventDefault();
+            });
+            
             // Add click fallback for desktop testing
             dpadLeft.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -763,6 +766,10 @@ Press **F11** for full-screen mode.`;
             dpadRight.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 handleButtonAction('font-larger', `Font: ${Math.min(144, fontSize + 2)}px`);
+            });
+            
+            dpadRight.addEventListener('touchend', (e) => {
+                e.preventDefault();
             });
             
             // Add click fallback for desktop testing
@@ -777,6 +784,10 @@ Press **F11** for full-screen mode.`;
                 const newState = isScrolling ? 'Paused' : 'Playing';
                 handleButtonAction('play-pause', newState);
                 updateCenterButtonIcon();
+            });
+            
+            dpadCenter.addEventListener('touchend', (e) => {
+                e.preventDefault();
             });
             
             // Add click fallback for desktop testing
@@ -848,7 +859,7 @@ Press **F11** for full-screen mode.`;
         adjustSpeedForFontSize(); // Set speed based on initial font size
         adjustMarginsForFontSize(); // Set initial margins
         updateDisplays();
-        showControlsTemporarily();
+        updateControlsVisibility();
         adjustReadingLineThickness(); // Set initial line thickness
         setupTouchDpad();
         setupTouchScrolling();
@@ -895,7 +906,7 @@ Press **F11** for full-screen mode.`;
                 cancelAnimationFrame(animationId);
             }
             updateDisplays();
-            showControlsTemporarily();
+            updateControlsVisibility();
         }
         
         function resetScript() {
@@ -910,7 +921,7 @@ Press **F11** for full-screen mode.`;
             loadScript();
             
             updateDisplays();
-            showControlsTemporarily();
+            updateControlsVisibility();
         }
         
         function adjustSpeed(delta) {
@@ -920,7 +931,6 @@ Press **F11** for full-screen mode.`;
                 originalSpeed = scrollSpeed;
             }
             updateDisplays();
-            showControlsTemporarily();
         }
         
         function adjustFontSize(delta) {
@@ -930,7 +940,6 @@ Press **F11** for full-screen mode.`;
             adjustReadingLineThickness();
             adjustSpeedForFontSize();
             updateDisplays();
-            showControlsTemporarily();
         }
         
         function cycleFontSize() {
@@ -941,7 +950,6 @@ Press **F11** for full-screen mode.`;
             adjustReadingLineThickness();
             adjustSpeedForFontSize();
             updateDisplays();
-            showControlsTemporarily();
         }
         
         function increaseFontSize() {
@@ -967,7 +975,6 @@ Press **F11** for full-screen mode.`;
             });
             
             updateDisplays();
-            showControlsTemporarily();
         }
         
         function adjustMarginsForFontSize() {
@@ -1121,16 +1128,23 @@ Press **F11** for full-screen mode.`;
             }
         }
         
-        function showControlsTemporarily() {
+        function updateControlsVisibility() {
             if (!controlsVisible) return;
             
-            controlsElement.classList.remove('hidden');
             clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(() => {
-                if (controlsVisible && !isScrolling) {
-                    controlsElement.classList.add('hidden');
-                }
-            }, 3000);
+            
+            if (isScrolling) {
+                // Hide controls 3 seconds after play starts
+                controlsElement.classList.remove('hidden');
+                hideTimeout = setTimeout(() => {
+                    if (controlsVisible && isScrolling) {
+                        controlsElement.classList.add('hidden');
+                    }
+                }, 3000);
+            } else {
+                // Show controls when paused
+                controlsElement.classList.remove('hidden');
+            }
         }
         
         function updateDisplays() {
@@ -1237,8 +1251,10 @@ Press **F11** for full-screen mode.`;
             }
         });
         
-        // Mouse movement shows controls temporarily
-        document.addEventListener('mousemove', showControlsTemporarily);
+        // Mouse movement shows controls (no effect on visibility logic)
+        document.addEventListener('mousemove', () => {
+            // Mouse movement doesn't affect control visibility in new logic
+        });
         
         // Manual scrolling with trackpad/mouse wheel
         let manualScrollTimeout = null;
