@@ -186,6 +186,113 @@
             transform: translateY(-1px);
         }
         
+        /* Touch D-Pad Styles */
+        .touch-dpad {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            z-index: 1001;
+            display: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        .touch-dpad.visible {
+            display: block;
+        }
+        
+        .dpad-button {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .dpad-button:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+        
+        .dpad-up {
+            top: 0;
+            left: 50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 25px 25px 5px 5px;
+        }
+        
+        .dpad-down {
+            bottom: 0;
+            left: 50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 5px 5px 25px 25px;
+        }
+        
+        .dpad-left {
+            left: 0;
+            top: 50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 25px 5px 5px 25px;
+        }
+        
+        .dpad-right {
+            right: 0;
+            top: 50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 5px 25px 25px 5px;
+        }
+        
+        .dpad-center {
+            top: 50px;
+            left: 50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: rgba(76, 175, 80, 0.2);
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+        
+        .dpad-center:active {
+            background: rgba(76, 175, 80, 0.4);
+        }
+        
+        /* Touch feedback */
+        .touch-feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 2000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .touch-feedback.show {
+            opacity: 1;
+        }
+        
         @media (max-width: 768px) {
             .script-content {
                 padding: 20px 30px;
@@ -201,6 +308,17 @@
             .control-group {
                 justify-content: center;
             }
+            
+            .touch-dpad {
+                display: block;
+            }
+        }
+        
+        /* Detect touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            .touch-dpad {
+                display: block;
+            }
         }
     </style>
 </head>
@@ -215,10 +333,10 @@
                 </div>
                 <div class="control-center">
                     <div class="instructions">
-                        ← → Speed | ↑ ↓ Font Size | Space Play/Pause | H Hide
+                        ← → Font Size | ↑ ↓ Speed | Space Play/Pause | H Hide
                     </div>
                     <div class="instructions-sub">
-                        Hold ← → for FF/RW
+                        Hold ↑ ↓ for RW/FF
                     </div>
                 </div>
                 <div class="control-right">
@@ -234,6 +352,18 @@
             <div id="loading-message">Loading script...</div>
             <div style="height: 100vh;"></div>
         </div>
+        
+        <!-- Touch D-Pad -->
+        <div class="touch-dpad" id="touch-dpad">
+            <div class="dpad-button dpad-up" id="dpad-up">▲</div>
+            <div class="dpad-button dpad-down" id="dpad-down">▼</div>
+            <div class="dpad-button dpad-left" id="dpad-left">-</div>
+            <div class="dpad-button dpad-right" id="dpad-right">+</div>
+            <div class="dpad-button dpad-center" id="dpad-center">▶</div>
+        </div>
+        
+        <!-- Touch Feedback -->
+        <div class="touch-feedback" id="touch-feedback"></div>
     </div>
 
     <script>
@@ -258,12 +388,35 @@
         const ffSpeed = 3.0; // Fast forward speed
         const rwSpeed = -2.0; // Rewind speed (negative for reverse)
         
+        // Touch state
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let isTouchScrolling = false;
+        let touchFeedbackTimeout = null;
+        let touchLongPressTimeout = null;
+        let isTouchDevice = false;
+        
         // DOM Elements
         const scriptContent = document.getElementById('script-content');
         const statusElement = document.getElementById('status');
         const speedDisplay = document.getElementById('speed-display');
         const fontSizeDisplay = document.getElementById('font-size-display');
         const controlsElement = document.getElementById('controls');
+        const touchDpad = document.getElementById('touch-dpad');
+        const touchFeedback = document.getElementById('touch-feedback');
+        
+        // Detect touch device
+        function detectTouchDevice() {
+            isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (isTouchDevice) {
+                touchDpad.classList.add('visible');
+            }
+        }
+        
+        // Force show D-pad for testing (remove this in production)
+        function forceShowDpad() {
+            touchDpad.classList.add('visible');
+        }
         
         // Load script from localStorage, external file, or show upload option
         function loadScript() {
@@ -389,12 +542,234 @@ Press **F11** for full-screen mode.`;
         // Add event listener for upload button
         document.getElementById('uploadScriptBtn').addEventListener('click', uploadScript);
 
+        // Update center button icon based on play state
+        function updateCenterButtonIcon() {
+            const centerButton = document.getElementById('dpad-center');
+            if (centerButton) {
+                if (isScrolling) {
+                    centerButton.innerHTML = '⏸'; // Pause icon
+                } else {
+                    centerButton.innerHTML = '▶'; // Play icon
+                }
+            }
+        }
+        
+        // Add visual feedback to D-pad buttons for keyboard presses
+        function activateDpadButton(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.classList.add('active');
+                // Use the same visual effect as :active pseudo-class
+                button.style.background = 'rgba(255, 255, 255, 0.3)';
+                button.style.transform = 'scale(0.95)';
+            }
+        }
+        
+        function deactivateDpadButton(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.classList.remove('active');
+                button.style.background = '';
+                button.style.transform = '';
+            }
+        }
+        
+        // Touch feedback function
+        function showTouchFeedback(message) {
+            touchFeedback.textContent = message;
+            touchFeedback.classList.add('show');
+            
+            clearTimeout(touchFeedbackTimeout);
+            touchFeedbackTimeout = setTimeout(() => {
+                touchFeedback.classList.remove('show');
+            }, 1000);
+        }
+        
+        // Touch D-Pad event handlers
+        function setupTouchDpad() {
+            const dpadUp = document.getElementById('dpad-up');
+            const dpadDown = document.getElementById('dpad-down');
+            const dpadLeft = document.getElementById('dpad-left');
+            const dpadRight = document.getElementById('dpad-right');
+            const dpadCenter = document.getElementById('dpad-center');
+            
+            // Helper function to handle button actions
+            function handleButtonAction(action, feedbackMessage) {
+                switch(action) {
+                    case 'speed-up':
+                        adjustSpeed(0.2);
+                        break;
+                    case 'speed-down':
+                        adjustSpeed(-0.2);
+                        break;
+                    case 'font-smaller':
+                        adjustFontSize(-2);
+                        break;
+                    case 'font-larger':
+                        adjustFontSize(2);
+                        break;
+                    case 'play-pause':
+                        toggleScrolling();
+                        break;
+                }
+                showTouchFeedback(feedbackMessage);
+                showControlsTemporarily();
+            }
+            
+            
+            // Up button - decrease speed (visually matches slowing down scroll)
+            dpadUp.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleButtonAction('speed-down', `Speed: ${Math.max(0.1, scrollSpeed - 0.2).toFixed(1)}x`);
+                
+                // Long press for rewind
+                touchLongPressTimeout = setTimeout(() => {
+                    startLongPress('rw');
+                    showTouchFeedback('Rewind');
+                }, longPressDelay);
+            });
+            
+            dpadUp.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                clearTimeout(touchLongPressTimeout);
+                endLongPress();
+            });
+            
+            // Add click fallback for desktop testing
+            dpadUp.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleButtonAction('speed-down', `Speed: ${Math.max(0.1, scrollSpeed - 0.2).toFixed(1)}x`);
+            });
+            
+            // Down button - increase speed (visually matches speeding up scroll)
+            dpadDown.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleButtonAction('speed-up', `Speed: ${(scrollSpeed + 0.2).toFixed(1)}x`);
+                
+                // Long press for fast forward
+                touchLongPressTimeout = setTimeout(() => {
+                    startLongPress('ff');
+                    showTouchFeedback('Fast Forward');
+                }, longPressDelay);
+            });
+            
+            dpadDown.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                clearTimeout(touchLongPressTimeout);
+                endLongPress();
+            });
+            
+            // Add click fallback for desktop testing
+            dpadDown.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleButtonAction('speed-up', `Speed: ${(scrollSpeed + 0.2).toFixed(1)}x`);
+            });
+            
+            // Left button - decrease font size
+            dpadLeft.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleButtonAction('font-smaller', `Font: ${Math.max(16, fontSize - 2)}px`);
+            });
+            
+            // Add click fallback for desktop testing
+            dpadLeft.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleButtonAction('font-smaller', `Font: ${Math.max(16, fontSize - 2)}px`);
+            });
+            
+            // Right button - increase font size
+            dpadRight.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleButtonAction('font-larger', `Font: ${Math.min(144, fontSize + 2)}px`);
+            });
+            
+            // Add click fallback for desktop testing
+            dpadRight.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleButtonAction('font-larger', `Font: ${Math.min(144, fontSize + 2)}px`);
+            });
+            
+            // Center button - play/pause
+            dpadCenter.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const newState = isScrolling ? 'Paused' : 'Playing';
+                handleButtonAction('play-pause', newState);
+                updateCenterButtonIcon();
+            });
+            
+            // Add click fallback for desktop testing
+            dpadCenter.addEventListener('click', (e) => {
+                e.preventDefault();
+                const newState = isScrolling ? 'Paused' : 'Playing';
+                handleButtonAction('play-pause', newState);
+                updateCenterButtonIcon();
+            });
+        }
+        
+        // Touch drag scrolling
+        function setupTouchScrolling() {
+            scriptContent.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    touchStartY = e.touches[0].clientY;
+                    touchStartX = e.touches[0].clientX;
+                    isTouchScrolling = false;
+                    
+                    // Pause automatic scrolling during touch
+                    if (isScrolling) {
+                        wasScrollingBeforeManual = true;
+                        isScrolling = false;
+                    }
+                }
+            });
+            
+            scriptContent.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    e.preventDefault();
+                    
+                    const touchY = e.touches[0].clientY;
+                    const touchX = e.touches[0].clientX;
+                    const deltaY = touchY - touchStartY;
+                    const deltaX = touchX - touchStartX;
+                    
+                    // Only scroll if primarily vertical movement
+                    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+                        isTouchScrolling = true;
+                        
+                        const currentTop = parseFloat(scriptContent.style.top) || 180;
+                        const scrollSensitivity = 1.5;
+                        const newTop = currentTop + (deltaY * scrollSensitivity);
+                        
+                        scriptContent.style.top = newTop + 'px';
+                        touchStartY = touchY;
+                    }
+                }
+            });
+            
+            scriptContent.addEventListener('touchend', (e) => {
+                if (isTouchScrolling) {
+                    // Resume automatic scrolling after 2 seconds
+                    setTimeout(() => {
+                        if (wasScrollingBeforeManual) {
+                            isScrolling = true;
+                            wasScrollingBeforeManual = false;
+                            scroll();
+                        }
+                    }, 2000);
+                }
+                isTouchScrolling = false;
+            });
+        }
+        
         // Initialize
+        detectTouchDevice();
+        forceShowDpad(); // Force show for testing - remove in production
         adjustSpeedForFontSize(); // Set speed based on initial font size
         adjustMarginsForFontSize(); // Set initial margins
         updateDisplays();
         showControlsTemporarily();
         adjustReadingLineThickness(); // Set initial line thickness
+        setupTouchDpad();
+        setupTouchScrolling();
         loadScript();
         
         // Animation function
@@ -681,36 +1056,42 @@ Press **F11** for full-screen mode.`;
             statusElement.style.color = isScrolling ? '#4CAF50' : '#f44336';
             speedDisplay.textContent = scrollSpeed.toFixed(1) + 'x';
             fontSizeDisplay.textContent = fontSize + 'px';
+            updateCenterButtonIcon();
         }
         
         // Keyboard event handler
         document.addEventListener('keydown', function(event) {
             switch(event.code) {
-                case 'Space':
-                    event.preventDefault();
-                    toggleScrolling();
-                    break;
                 case 'ArrowRight':
                     event.preventDefault();
-                    if (!longPressTimeout && !isLongPressing) {
-                        adjustSpeed(0.2);
-                    }
-                    startLongPress('ff');
+                    activateDpadButton('dpad-right');
+                    adjustFontSize(2);
                     break;
                 case 'ArrowLeft':
                     event.preventDefault();
+                    activateDpadButton('dpad-left');
+                    adjustFontSize(-2);
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    activateDpadButton('dpad-up');
                     if (!longPressTimeout && !isLongPressing) {
                         adjustSpeed(-0.2);
                     }
                     startLongPress('rw');
                     break;
-                case 'ArrowUp':
-                    event.preventDefault();
-                    adjustFontSize(2);
-                    break;
                 case 'ArrowDown':
                     event.preventDefault();
-                    adjustFontSize(-2);
+                    activateDpadButton('dpad-down');
+                    if (!longPressTimeout && !isLongPressing) {
+                        adjustSpeed(0.2);
+                    }
+                    startLongPress('ff');
+                    break;
+                case 'Space':
+                    event.preventDefault();
+                    activateDpadButton('dpad-center');
+                    toggleScrolling();
                     break;
                 case 'KeyH':
                     event.preventDefault();
@@ -753,6 +1134,25 @@ Press **F11** for full-screen mode.`;
         document.addEventListener('keyup', function(event) {
             // Always end long press on any key release to be more reliable
             endLongPress();
+            
+            // Remove visual feedback from D-pad buttons
+            switch(event.code) {
+                case 'ArrowRight':
+                    deactivateDpadButton('dpad-right');
+                    break;
+                case 'ArrowLeft':
+                    deactivateDpadButton('dpad-left');
+                    break;
+                case 'ArrowUp':
+                    deactivateDpadButton('dpad-up');
+                    break;
+                case 'ArrowDown':
+                    deactivateDpadButton('dpad-down');
+                    break;
+                case 'Space':
+                    deactivateDpadButton('dpad-center');
+                    break;
+            }
         });
         
         // Mouse movement shows controls temporarily

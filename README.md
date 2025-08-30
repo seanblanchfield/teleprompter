@@ -22,6 +22,7 @@ The keybindings are specifically mapped to common presentation remote controls, 
 - **Fast Forward/Rewind**: Long-press controls for quick navigation
 - **Reading Line**: Visual guide that scales with font size
 - **Professional Controls**: Comprehensive keyboard shortcuts
+- **Touch Screen Support**: On-screen D-pad and drag scrolling for mobile devices
 
 ## Keyboard Controls
 
@@ -36,9 +37,20 @@ These controls work with popular presentation remotes like the Logitech R400:
 ### Additional Keyboard Controls
 - **Space** - Toggle play/pause
 - **R** - Reset to beginning and clear uploaded script from cache
-- **← →** - Adjust speed (tap) / Rewind/Fast Forward (hold)
-- **↑ ↓** - Fine adjust font size (+/- 2px)
+- **← →** - Adjust font size (+/- 2px)
+- **↑ ↓** - Adjust speed (tap) / Rewind/Fast Forward (hold)
 - **H** - Hide/show controls
+
+## Touch Screen Controls
+
+For touch screen devices, an on-screen D-pad appears automatically:
+
+- **▲ (Up)** - Decrease speed (tap) / Rewind (hold)
+- **▼ (Down)** - Increase speed (tap) / Fast Forward (hold)
+- **◀ (Left)** - Decrease font size
+- **▶ (Right)** - Increase font size
+- **▶/⏸ (Center)** - Play/pause toggle
+- **Drag scrolling** - Touch and drag the script content to manually scroll
 
 ### Remote Control Usage
 With a Logitech R400 or similar presentation remote:
